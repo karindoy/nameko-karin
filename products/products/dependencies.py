@@ -63,7 +63,8 @@ class StorageWrapper:
 
     def delete(self, product_id):
         
-        if product_id not in {prod['id'] for prod in self.list_ids}:
+        list_ids = [prod['id'] for prod in self.list_ids()]
+        if product_id not in list_ids:
             raise NotFound('Product ID {} does not exist'.format(product_id))
         else:
             return self.client.delete(self._format_key(product_id))

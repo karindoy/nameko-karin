@@ -63,3 +63,10 @@ def test_decrement_stock(storage, create_product, redis_client):
     assert b'10' == product_one[b'in_stock']
     assert b'7' == product_two[b'in_stock']
     assert b'12' == product_three[b'in_stock']
+
+def test_delete(storage, products):
+    first_product_id = products[0]['id']
+    storage.delete(first_product_id)
+    list_ids = {prod['id'] for prod in storage.list()}
+    assert (first_product_id not in list_ids)
+    
