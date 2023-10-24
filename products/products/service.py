@@ -27,7 +27,6 @@ class ProductsService:
 
     @rpc
     def list_ids(self):
-        logger.info('products list_ids')
         return self.storage.list_ids()
     
     @rpc
