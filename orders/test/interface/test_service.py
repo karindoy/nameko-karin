@@ -94,3 +94,7 @@ def test_can_update_order(orders_rpc, order):
 def test_can_delete_order(orders_rpc, order, db_session):
     orders_rpc.delete_order(order.id)
     assert not db_session.query(Order).filter_by(id=order.id).count()
+
+def test_get_orders(orders_rpc, order):
+    response = orders_rpc.get_orders()
+    assert response[0]['id'] == order.id

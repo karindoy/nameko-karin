@@ -74,6 +74,6 @@ class OrdersService:
         self.db.commit()
 
     @rpc
-    def list_orders(self):
-        orders = self.db.query(Order).get()
+    def get_orders(self):
+        orders = self.db.query(Order).all()
         return OrderSchema(many=True).dump(orders).data

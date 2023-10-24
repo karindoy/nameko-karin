@@ -74,6 +74,19 @@ class GatewayService(object):
             json.dumps({'id': product_data['id']}), mimetype='application/json'
         )
 
+    @http(
+        "DELETE", "/products/<string:product_id>",
+        expected_exceptions=ProductNotFound
+    )
+    def delete_product(self, request, product_id):
+        """Delete product by `product_id`
+        """
+        response = self.products_rpc.delete(product_id)
+        return Response(
+            response, 
+            mimetype='application/json'
+        )
+        
     @http("GET", "/orders/<int:order_id>", expected_exceptions=OrderNotFound)
     def get_order(self, request, order_id):
         """Gets the order details for the order given by `order_id`.
@@ -167,3 +180,37 @@ class GatewayService(object):
             serialized_data['order_details']
         )
         return result['id']
+
+    @http("GET", "/orders")
+    def get_orders(self, request):
+        """Gets the all order details.
+
+        Enhances the order details with full product details from the
+        products-service.
+        """
+        
+        orders = self._get_orders()
+        orders_response = [GetOrderSchema().dumps(order).data for order in orders]
+        return Response(
+            orders_response,
+            mimetype='application/json'
+        )
+
+    def _get_orders(self):
+        # Retrieve order data from the orders service.
+        # Note - this may raise a remote exception that has been mapped to
+        # raise``OrderNotFound``
+        orders = self.orders_rpc.get_orders()
+        product_map = {prod['id']: prod for prod in self.products_rpc.list()}
+        
+        # get the configured image root
+        image_root = config['PRODUCT_IMAGE_ROOT']
+
+        # Enhance order details with product and image details.
+        for order in orders:
+            for order_detail in order['order_details']:
+                order_detail['product'] = product_map[order_detail['product_id']]
+        #         # Construct an image url.
+                order_detail['image'] = '{}/{}.jpg'.format(image_root, order_detail['product']['id'])
+
+        return orders

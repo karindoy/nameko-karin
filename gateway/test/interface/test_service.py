@@ -171,17 +171,93 @@ class TestGetOrder(object):
         assert gateway_service.products_rpc.get.call_args_list == [
             call("the_odyssey"),  call('the_enigma')
         ]
-        
-    def test_order_not_found(self, gateway_service, web_session):
-        gateway_service.orders_rpc.get_order.side_effect = (
-            OrderNotFound('missing'))
+
+class TestGetOrders(object):
+
+    def test_can_get_orders(self, gateway_service, web_session):
+        # setup mock orders-service response:
+        gateway_service.orders_rpc.get_orders.return_value = [
+                {
+                'id': 1,
+                'order_details': [
+                    {
+                        'id': 1,
+                        'quantity': 2,
+                        'product_id': 'the_odyssey',
+                        'price': '200.00'
+                    },
+                    {
+                        'id': 2,
+                        'quantity': 1,
+                        'product_id': 'the_enigma',
+                        'price': '400.00'
+                    }
+                ]
+            }
+        ]
+
+        gateway_service.products_rpc.list.return_value = [
+            {
+                'id': 'the_odyssey',
+                'title': 'The Odyssey',
+                'maximum_speed': 3,
+                'in_stock': 899,
+                'passenger_capacity': 100
+            },
+            {
+                'id': 'the_enigma',
+                'title': 'The Enigma',
+                'maximum_speed': 200,
+                'in_stock': 1,
+                'passenger_capacity': 4
+            },
+        ]
 
         # call the gateway service to get order #1
-        response = web_session.get('/orders/1')
-        assert response.status_code == 404
-        payload = response.json()
-        assert payload['error'] == 'ORDER_NOT_FOUND'
-        assert payload['message'] == 'missing'
+        response = web_session.get('/orders')
+        assert response.status_code == 200
+
+        expected_response = {
+            'id': 1,
+            'order_details': [
+                {
+                    'id': 1,
+                    'quantity': 2,
+                    'product_id': 'the_odyssey',
+                    'image':
+                        'http://example.com/airship/images/the_odyssey.jpg',
+                    'product': {
+                        'id': 'the_odyssey',
+                        'title': 'The Odyssey',
+                        'maximum_speed': 3,
+                        'in_stock': 899,
+                        'passenger_capacity': 100
+                    },
+                    'price': '200.00'
+                },
+                {
+                    'id': 2,
+                    'quantity': 1,
+                    'product_id': 'the_enigma',
+                    'image':
+                        'http://example.com/airship/images/the_enigma.jpg',
+                    'product': {
+                        'id': 'the_enigma',
+                        'title': 'The Enigma',
+                        'maximum_speed': 200,
+                        'in_stock': 1,
+                        'passenger_capacity': 4
+                    },
+                    'price': '400.00'
+                }
+            ]
+        }
+        
+        assert expected_response == response.json()
+
+        # check dependencies called as expected
+        assert [call()] == gateway_service.orders_rpc.get_orders.call_args_list
+        assert [call()] == gateway_service.products_rpc.list.call_args_list 
 
 
 class TestCreateOrder(object):
