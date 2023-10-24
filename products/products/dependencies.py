@@ -36,6 +36,9 @@ class StorageWrapper:
             'in_stock': int(document[b'in_stock'])
         }
 
+    def _format_ids(self, key):
+        return key.decode('utf-8').replace('products:', '')
+    
     def get(self, product_id):
         product = self.client.hgetall(self._format_key(product_id))
         if not product:
@@ -47,15 +50,35 @@ class StorageWrapper:
         keys = self.client.keys(self._format_key('*'))
         for key in keys:
             yield self._from_hash(self.client.hgetall(key))
+        
+    def list_ids(self):
+        keys = self.client.keys(self._format_key('*'))
+        return [{'id': self._format_ids(key) } for key in keys]
+
 
     def create(self, product):
         self.client.hmset(
             self._format_key(product['id']),
             product)
 
-    def decrement_stock(self, product_id, amount):
-        return self.client.hincrby(
-            self._format_key(product_id), 'in_stock', -amount)
+    def delete(self, product_id):
+        
+        if product_id not in {prod['id'] for prod in self.list_ids}:
+            raise NotFound('Product ID {} does not exist'.format(product_id))
+        else:
+            return self.client.delete(self._format_key(product_id))
+        
+    def decrement_stock(self, product_ids_quantities):
+        response_dict = {}
+        with self.client.pipeline() as pipe: 
+            pipe.multi()
+            for product_id, amount in product_ids_quantities.items():
+                pipe.hincrby(self._format_key(product_id), 'in_stock', -amount)
+                x = pipe.execute()
+                response_dict[product_id] = x[0]
+                
+
+        return response_dict
 
 
 class Storage(DependencyProvider):

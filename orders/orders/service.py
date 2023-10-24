@@ -5,7 +5,7 @@ from nameko_sqlalchemy import DatabaseSession
 from orders.exceptions import NotFound
 from orders.models import DeclarativeBase, Order, OrderDetail
 from orders.schemas import OrderSchema
-
+from sqlalchemy.orm import joinedload
 
 class OrdersService:
     name = 'orders'
@@ -15,7 +15,13 @@ class OrdersService:
 
     @rpc
     def get_order(self, order_id):
-        order = self.db.query(Order).get(order_id)
+        order = (
+            self.db.query(Order)
+            .select_from(Order)
+            .options(joinedload(Order.order_details))
+            .filter(Order.id == order_id)
+            .first()
+        )
 
         if not order:
             raise NotFound('Order with id {} not found'.format(order_id))
@@ -66,3 +72,8 @@ class OrdersService:
         order = self.db.query(Order).get(order_id)
         self.db.delete(order)
         self.db.commit()
+
+    @rpc
+    def list_orders(self):
+        orders = self.db.query(Order).get()
+        return OrderSchema(many=True).dump(orders).data

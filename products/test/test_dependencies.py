@@ -53,9 +53,10 @@ def test_decrement_stock(storage, create_product, redis_client):
     create_product(id=2, title='LZ 129', in_stock=11)
     create_product(id=3, title='LZ 130', in_stock=12)
 
-    in_stock = storage.decrement_stock(2, 4)
+    product_ids_quantities = {2: 4}
+    in_stock = storage.decrement_stock(product_ids_quantities)
 
-    assert 7 == in_stock
+    assert 7 == in_stock.get(2)
     product_one, product_two, product_three = [
         redis_client.hgetall('products:{}'.format(id_))
         for id_ in (1, 2, 3)]

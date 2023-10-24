@@ -28,20 +28,14 @@ def _get_order(order_id, nameko_rpc):
     with nameko_rpc.next() as nameko:
         order = nameko.orders.get_order(order_id)
 
-    # Retrieve all products from the products service
-    with nameko_rpc.next() as nameko:
-        product_map = {prod['id']: prod for prod in nameko.products.list()}
-
     # get the configured image root
     image_root = config['PRODUCT_IMAGE_ROOT']
 
     # Enhance order details with product and image details.
     for item in order['order_details']:
-        product_id = item['product_id']
-
-        item['product'] = product_map[product_id]
+        item['product'] = nameko.products.get(item['product_id'])
         # Construct an image url.
-        item['image'] = '{}/{}.jpg'.format(image_root, product_id)
+        item['image'] = '{}/{}.jpg'.format(image_root, item['product']['id'])
 
     return order
 
@@ -55,7 +49,7 @@ def create_order(request: schemas.CreateOrder, rpc = Depends(get_rpc)):
 def _create_order(order_data, nameko_rpc):
     # check order product ids are valid
     with nameko_rpc.next() as nameko:
-        valid_product_ids = {prod['id'] for prod in nameko.products.list()}
+        valid_product_ids = {prod['id'] for prod in nameko.products.list_ids()}
         for item in order_data['order_details']:
             if item['product_id'] not in valid_product_ids:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
