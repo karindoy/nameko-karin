@@ -37,6 +37,38 @@ class TestGetProduct(object):
         payload = response.json()
         assert payload['error'] == 'PRODUCT_NOT_FOUND'
         assert payload['message'] == 'missing'
+        
+class TestVerifyExistProduct(object):
+    def test_can_verify_product_exist(self, gateway_service, web_session):
+        gateway_service.products_rpc.exist.return_value = True
+        response = web_session.get('/products/the_odyssey/exist')
+        
+        assert response.status_code == 200
+        assert gateway_service.products_rpc.exist.call_args_list == [
+            call("the_odyssey")
+        ]
+        assert response.text == "True"
+        
+        gateway_service.products_rpc.exist.return_value = False
+        response = web_session.get('/products/0000000/exist')
+        
+        assert response.status_code == 200
+        assert gateway_service.products_rpc.exist.call_args_list == [
+            call("the_odyssey"),
+            call("0000000")
+        ]
+        assert response.text == "False"
+
+    def test_product_not_found(self, gateway_service, web_session):
+        gateway_service.products_rpc.get.side_effect = (
+            ProductNotFound('missing'))
+
+        # call the gateway service to get order #1
+        response = web_session.get('/products/foo')
+        assert response.status_code == 404
+        payload = response.json()
+        assert payload['error'] == 'PRODUCT_NOT_FOUND'
+        assert payload['message'] == 'missing'
 
 
 class TestCreateProduct(object):
@@ -196,7 +228,25 @@ class TestGetOrders(object):
             }
         ]
 
-        gateway_service.products_rpc.list.return_value = [
+        gateway_service.orders_rpc.get_order.return_value = {
+            'id': 1,
+            'order_details': [
+                {
+                    'id': 1,
+                    'quantity': 2,
+                    'product_id': 'the_odyssey',
+                    'price': '200.00'
+                },
+                {
+                    'id': 2,
+                    'quantity': 1,
+                    'product_id': 'the_enigma',
+                    'price': '400.00'
+                }
+            ]
+        }
+
+        products_response = [
             {
                 'id': 'the_odyssey',
                 'title': 'The Odyssey',
@@ -210,10 +260,13 @@ class TestGetOrders(object):
                 'maximum_speed': 200,
                 'in_stock': 1,
                 'passenger_capacity': 4
-            },
+            }
         ]
-
-        # call the gateway service to get order #1
+        # gateway_service.products_rpc.get.return_value = products_response.get('the_odyssey')
+        gateway_service.products_rpc.get = Mock()
+        gateway_service.products_rpc.get.side_effect = products_response
+        
+        # call the gateway service to get order
         response = web_session.get('/orders')
         assert response.status_code == 200
 
@@ -257,21 +310,14 @@ class TestGetOrders(object):
 
         # check dependencies called as expected
         assert [call()] == gateway_service.orders_rpc.get_orders.call_args_list
-        assert [call()] == gateway_service.products_rpc.list.call_args_list 
-
-
+        assert gateway_service.products_rpc.get.call_args_list == [
+            call("the_odyssey"),  call('the_enigma')
+        ]
 class TestCreateOrder(object):
 
     def test_can_create_order(self, gateway_service, web_session):
         # setup mock products-service response:
-        gateway_service.products_rpc.list_ids.return_value = [
-            {
-                'id': 'the_odyssey'
-            },
-            {
-                'id': 'the_enigma'
-            }
-        ]
+        gateway_service.products_rpc.exist.return_value = True
 
         # setup mock create response
         gateway_service.orders_rpc.create_order.return_value = {
@@ -294,7 +340,7 @@ class TestCreateOrder(object):
         )
         assert response.status_code == 200
         assert response.json() == {'id': 11}
-        assert gateway_service.products_rpc.list_ids.call_args_list == [call()]
+        assert gateway_service.products_rpc.exist.call_args_list == [call('the_odyssey')]
         assert gateway_service.orders_rpc.create_order.call_args_list == [
             call([
                 {'product_id': 'the_odyssey', 'quantity': 3, 'price': '41.00'}
@@ -333,22 +379,7 @@ class TestCreateOrder(object):
         self, gateway_service, web_session
     ):
         # setup mock products-service response:
-        gateway_service.products_rpc.list.return_value = [
-            {
-                'id': 'the_odyssey',
-                'title': 'The Odyssey',
-                'maximum_speed': 3,
-                'in_stock': 899,
-                'passenger_capacity': 100
-            },
-            {
-                'id': 'the_enigma',
-                'title': 'The Enigma',
-                'maximum_speed': 200,
-                'in_stock': 1,
-                'passenger_capacity': 4
-            },
-        ]
+        gateway_service.products_rpc.exist.return_value = False
 
         # call the gateway service to create the order
         response = web_session.post(

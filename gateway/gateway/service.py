@@ -81,11 +81,17 @@ class GatewayService(object):
     def delete_product(self, request, product_id):
         """Delete product by `product_id`
         """
-        response = self.products_rpc.delete(product_id)
+        self.products_rpc.delete(product_id)
         return Response(
-            response, 
-            mimetype='application/json'
+            mimetype='application/json', status=204
         )
+        
+    @http( "GET", "/products/<string:product_id>/exist")
+    def exist_product(self, request, product_id):
+        """Verify the existence of product by `product_id`
+        """
+        response = self.products_rpc.exist(product_id)
+        return Response(str(response), status=200)
         
     @http("GET", "/orders/<int:order_id>", expected_exceptions=OrderNotFound)
     def get_order(self, request, order_id):
@@ -110,10 +116,12 @@ class GatewayService(object):
         image_root = config['PRODUCT_IMAGE_ROOT']
 
         # Enhance order details with product and image details.
-        for item in order['order_details']:
-            item['product'] = self.products_rpc.get(item['product_id'])
+        for order_details in order['order_details']:
+            product_id = order_details['product_id']
+            if(bool(self.products_rpc.exist(product_id))):
+                order_details['product'] = self.products_rpc.get(product_id)
             # Construct an image url.
-            item['image'] = '{}/{}.jpg'.format(image_root, item['product']['id'])
+            order_details['image'] = '{}/{}.jpg'.format(image_root, order_details['product_id'])
 
         return order
 
@@ -165,9 +173,10 @@ class GatewayService(object):
 
     def _create_order(self, order_data):
         # check order product ids are valid
-        valid_product_ids = {prod['id'] for prod in self.products_rpc.list_ids()}
+        
         for item in order_data['order_details']:
-            if item['product_id'] not in valid_product_ids:
+            exist_product = self.products_rpc.exist(item['product_id'])
+            if not exist_product:
                 raise ProductNotFound(
                     "Product Id {}".format(item['product_id'])
                 )
@@ -201,16 +210,17 @@ class GatewayService(object):
         # Note - this may raise a remote exception that has been mapped to
         # raise``OrderNotFound``
         orders = self.orders_rpc.get_orders()
-        product_map = {prod['id']: prod for prod in self.products_rpc.list()}
         
         # get the configured image root
         image_root = config['PRODUCT_IMAGE_ROOT']
 
         # Enhance order details with product and image details.
         for order in orders:
-            for order_detail in order['order_details']:
-                order_detail['product'] = product_map[order_detail['product_id']]
+            for order_details in order['order_details']:
+                product_id = order_details['product_id']
+                if(bool(self.products_rpc.exist(product_id))):
+                    order_details['product'] = self.products_rpc.get(product_id)
         #         # Construct an image url.
-                order_detail['image'] = '{}/{}.jpg'.format(image_root, order_detail['product']['id'])
+                order_details['image'] = '{}/{}.jpg'.format(image_root, product_id)
 
         return orders

@@ -57,7 +57,13 @@ curl -s "${STD_APP_URL}/orders/${ID}" | jq .
 echo "=== List Orders ==="
 curl -s "${STD_APP_URL}/orders" | jq .
 
+# Test: Product Exist
+echo "=== Exist product id: the_odyssey ==="
+curl -s "${STD_APP_URL}/products/the_odyssey/exist"
+
+echo -e "\n"
+
 # Test: Delete Product
 echo "=== Deleting product id: the_odyssey ==="
-curl -XDELETE "${STD_APP_URL}/products/the_odyssey" 
+echo $(curl -s -XDELETE "${STD_APP_URL}/products/the_odyssey" )
 

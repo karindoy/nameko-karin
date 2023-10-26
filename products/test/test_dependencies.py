@@ -32,11 +32,12 @@ def test_list(storage, products):
     listed_products = storage.list()
     assert (
         products == sorted(list(listed_products), key=lambda x: x['id']))
-    
-def test_list_ids(storage, products):
-    listed_products_ids = storage.list_ids()
-    assert ({prod['id'] for prod in products} == {prod['id'] for prod in listed_products_ids} )
 
+def test_exist(storage, products):
+    is_created = storage.exist(products[0]['id'])
+    assert True == is_created
+    is_not_created = storage.exist('000000')
+    assert False == is_not_created
 
 def test_create(product, redis_client, storage):
 

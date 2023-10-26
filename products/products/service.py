@@ -24,10 +24,6 @@ class ProductsService:
     def list(self):
         products = self.storage.list()
         return schemas.Product(many=True).dump(products).data
-
-    @rpc
-    def list_ids(self):
-        return self.storage.list_ids()
     
     @rpc
     def create(self, product):
@@ -38,6 +34,10 @@ class ProductsService:
     def delete(self, product_id):
         product = self.storage.delete(product_id)
         return schemas.Product().dump(product).data
+    
+    @rpc
+    def exist(self, product_id):
+        return self.storage.exist(product_id)
         
     @event_handler('orders', 'order_created')
     def handle_order_created(self, payload):

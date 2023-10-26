@@ -50,11 +50,10 @@ class StorageWrapper:
         keys = self.client.keys(self._format_key('*'))
         for key in keys:
             yield self._from_hash(self.client.hgetall(key))
-        
-    def list_ids(self):
-        keys = self.client.keys(self._format_key('*'))
-        return [{'id': self._format_ids(key) } for key in keys]
 
+    def exist(self, product_id):
+        exist: bool = self.client.exists(self._format_key(product_id)) > 0
+        return exist
 
     def create(self, product):
         self.client.hmset(
@@ -63,8 +62,7 @@ class StorageWrapper:
 
     def delete(self, product_id):
         
-        list_ids = [prod['id'] for prod in self.list_ids()]
-        if product_id not in list_ids:
+        if not self.exist(product_id):
             raise NotFound('Product ID {} does not exist'.format(product_id))
         else:
             return self.client.delete(self._format_key(product_id))
