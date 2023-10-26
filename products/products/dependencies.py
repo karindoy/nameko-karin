@@ -52,8 +52,7 @@ class StorageWrapper:
             yield self._from_hash(self.client.hgetall(key))
 
     def exist(self, product_id):
-        exist: bool = self.client.exists(self._format_key(product_id)) > 0
-        return exist
+        return self.client.hexists(self._format_key(product_id), 'id') > 0
 
     def create(self, product):
         self.client.hmset(

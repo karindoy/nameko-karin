@@ -45,10 +45,6 @@ scenarios:
         product_id: $.id
         default: NOT_FOUND
 
-    - if: '"${product_id}" == "NOT_FOUND"'
-      then:
-        - action: continue
-
     # 2. Get Product
     - url: /products/${product_id}
       label: product-get
@@ -124,9 +120,6 @@ scenarios:
         order_id: $[0].id
         default: NOT_FOUND
         
-    - if: '"${order_id}" == "NOT_FOUND"'
-      then:
-        - action: continue
 
     # 6. Delete Product
     - url: /products/${product_id}
