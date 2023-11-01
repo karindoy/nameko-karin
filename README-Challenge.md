@@ -52,4 +52,4 @@ In addition to making the changes suggested in question 2, a pipeline was create
                 x = pipe.execute()
                 response_dict[product_id] = x[0]
 ```
-The entire code can be seen at the link: https://github.com/gitricko/nameko-devex/compare/master...karindoy:nameko-karin:master?diff=split
+The entire code can be seen at the link: [compare](https://github.com/karindoy/nameko-karin/compare/00381c066045d8ba8418d4b4b28a2ca87321f826...4237f569c663fe8d7a91b87e8385699831df659a)
